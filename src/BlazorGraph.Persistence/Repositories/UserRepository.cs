@@ -9,25 +9,21 @@ public class UserRepository(GremlinClient client)
 {
     private readonly GraphTraversalSource _g = Traversal().With(new DriverRemoteConnection(client));
 
-    public async Task<List<string>> GetRecommendationsAsync(string userName)
+    public async Task<IDictionary<string, long>> GetRecommendationsAsync(string userName)
     {
         var purchases = await _g.V().Has("person", "name", userName)
-            .As("self") // Label the starting user
-            .Out("purchased").Aggregate("bought") // Collect what they already own
-            .In("purchased") // Find peers who bought the same things
-            .Where(P.Not(P.Eq("self"))) // Don't look at Lilou herself as a peer
-            .Out("purchased") // Find what those peers bought
-            .Where(P.Without("bought")) // Filter out what Lilou already owns
-            .Dedup() // Remove duplicates
-            .Values<string>("name") // Get the product names
-            .Promise(t => t.ToList());
+                            .As("self") // Label the starting user
+                            .Out("purchased").Aggregate("bought") // Collect what they already own
+                            .In("purchased") // Find peers who bought the same things
+                            .Where(P.Not(P.Eq("self"))) // Don't look at Lilou herself as a peer
+                            .Out("purchased") // Find what those peers bought
+                            .Where(P.Without("bought")) // Filter out what Lilou already owns
+                            // 2. Count occurrences and return as a Map
+                            .GroupCount<string>().By("name")
+                            .Promise(t => t.Next()) ??
+                        new Dictionary<string, long>();
 
-        var retval = purchases
-            .Where(s => !string.IsNullOrEmpty(s))
-            .Select(s => s!)
-            .ToList();
-
-        return retval;
+        return purchases;
     }
 
     public async Task<IList<string>> GetExistingUserNamesAsync()

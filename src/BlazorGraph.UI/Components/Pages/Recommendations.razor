@@ -1,6 +1,6 @@
 ﻿@page "/recommendations"
-@rendermode InteractiveServer
 @using BlazorGraph.Persistence.Repositories
+@rendermode InteractiveServer
 @inject UserRepository UserRepository
 
 <PageTitle>Recommendations</PageTitle>
@@ -28,9 +28,12 @@ else if (_recommendations.Any())
 {
     <h4>Suggested for @_selectedUserName:</h4>
     <ul class="list-group">
-        @foreach (var product in _recommendations)
+        @foreach (var item in _recommendations.OrderByDescending(x => x.Value))
         {
-            <li class="list-group-item">@product</li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                @item.Key
+                <span class="badge bg-primary rounded-pill">@item.Value peers bought this</span>
+            </li>
         }
     </ul>
 }
@@ -43,7 +46,7 @@ else
 @code {
     private IList<string> _userNames = [];
     private string _selectedUserName = string.Empty;
-    private IList<string> _recommendations = [];
+    private IDictionary<string, long> _recommendations = new Dictionary<string, long>();
     private bool _isLoading;
 
 
@@ -56,16 +59,17 @@ else
 
     private async Task OnUserSelected(ChangeEventArgs arg)
     {
-        
         _selectedUserName = arg.Value?.ToString() ?? string.Empty;
-        _recommendations = [];
 
-        if (!string.IsNullOrWhiteSpace(_selectedUserName))
+        if (string.IsNullOrWhiteSpace(_selectedUserName))
         {
-            _isLoading = true;
-            _recommendations = await UserRepository.GetRecommendationsAsync(_selectedUserName);
-            _isLoading = false;
+            _recommendations = new Dictionary<string, long>();
+            return;
         }
+
+        _isLoading = true;
+        _recommendations = await UserRepository.GetRecommendationsAsync(_selectedUserName);
+        _isLoading = false;
     }
 
 }
