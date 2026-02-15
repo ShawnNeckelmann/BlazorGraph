@@ -1,5 +1,6 @@
+using BlazorGraph.Persistence.Seed;
 using BlazorGraph.UI.Components;
-using Gremlin.Net.Driver;
+using BlazorGraph.UI.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,19 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<GremlinClient>(_ => new GremlinClient(new GremlinServer(
-    builder.Configuration["Gremlin:Hostname"],
-    int.Parse(builder.Configuration["Gremlin:Port"] ?? "0"),
-    bool.Parse(builder.Configuration["Gremlin:EnableSsl"] ?? "false")
-)));
+builder.RegisterServices();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -32,4 +27,10 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+await app.SeedGremlinDatabase();
+var scope = app.Services.CreateScope();
+var seedService = scope.ServiceProvider.GetRequiredService<GraphSeedingService>();
+await seedService.SeedAsync();
+
+
+await app.RunAsync();
