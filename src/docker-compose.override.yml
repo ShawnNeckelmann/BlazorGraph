@@ -1,0 +1,24 @@
+services:
+  blazorgraph.ui:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - Gremlin__HostName=gremlin-server
+      - Gremlin__Port=8182
+      - Gremlin__EnableSsl=false
+    ports:
+      - "8080"
+      - "8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+  gremlinserver:
+    image: tinkerpop/gremlin-server:3.8
+    container_name: gremlin-server
+    environment:
+      - GREMLIN_SERVER_PORT=8182
+    ports:
+      - "8182"

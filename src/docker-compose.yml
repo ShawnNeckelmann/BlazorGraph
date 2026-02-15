@@ -1,0 +1,6 @@
+services:
+  blazorgraph.ui:
+    image: ${DOCKER_REGISTRY-}blazorgraphui
+    build:
+      context: .
+      dockerfile: BlazorGraph.UI/Dockerfile

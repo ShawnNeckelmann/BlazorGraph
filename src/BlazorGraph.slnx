@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="BlazorGraph.Persistence/BlazorGraph.Persistence.csproj" />
+  <Project Path="BlazorGraph.UI/BlazorGraph.UI.csproj" />
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+</Solution>
