@@ -32,5 +32,4 @@ var scope = app.Services.CreateScope();
 var seedService = scope.ServiceProvider.GetRequiredService<GraphSeedingService>();
 await seedService.SeedAsync();
 
-
 await app.RunAsync();
