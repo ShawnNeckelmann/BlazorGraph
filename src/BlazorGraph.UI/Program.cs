@@ -30,6 +30,6 @@ app.MapRazorComponents<App>()
 await app.SeedGremlinDatabase();
 var scope = app.Services.CreateScope();
 var seedService = scope.ServiceProvider.GetRequiredService<GraphSeedingService>();
-await seedService.SeedAsync();
+await seedService.SeedAsync(100, 50);
 
 await app.RunAsync();
