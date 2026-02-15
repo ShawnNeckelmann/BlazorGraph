@@ -40,44 +40,33 @@ public class GraphSeedingService(GremlinClient client)
         var faker = new Faker();
 
         // 1. Generate Products first so users have something to buy
-        var productVertices = new List<Vertex>(productCount);
-        var productTasks = new List<Task<Vertex?>>(productCount);
+        var productIds = new List<Vertex>();
         for (var i = 0; i < productCount; i++)
         {
-            var task = _g.AddV("product")
+            var p = await _g.AddV("product")
                 .Property("name", faker.Commerce.ProductName())
-                .Promise(t => t.Next());
+                .Promise(traversal => traversal.Next());
 
-            productTasks.Add(task);
+            if (p == null) throw new Exception("Failed to create product vertex");
+            productIds.Add(p);
         }
-
-        var products = await Task.WhenAll(productTasks);
-        productVertices.AddRange(products.Where(p => p != null)!);
 
         // 2. Generate Users and link them to random products
-        var userTasks = new List<Task<Vertex?>>(userCount);
         for (var i = 0; i < userCount; i++)
         {
-            var task = _g.AddV("person")
+            var user = _g.AddV("person")
                 .Property("name", faker.Name.FullName())
-                .Promise(t => t.Next());
-            userTasks.Add(task);
-        }
+                .Next();
 
-        var users = await Task.WhenAll(userTasks);
+            // Pick 5-10 random products for this user
+            var randomProducts = faker.PickRandom(productIds, faker.Random.Number(5, 10));
 
-        // 3. Link users to random products
-        var edgeTasks = new List<Task>(userCount * 10); // estimate
-        foreach (var user in users)
-        {
-            var randomProducts = faker.PickRandom(productVertices, faker.Random.Number(5, 10));
             foreach (var prod in randomProducts)
-            {
-                var edgeTask = _g.V(user).AddE("purchased").To(prod).Promise(t => t.Iterate());
-                edgeTasks.Add(edgeTask);
-            }
+                await _g
+                    .V(user)
+                    .AddE("purchased")
+                    .To(prod)
+                    .Promise(traversal => traversal.Iterate());
         }
-
-        await Task.WhenAll(edgeTasks);
     }
 }
