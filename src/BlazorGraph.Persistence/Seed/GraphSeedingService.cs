@@ -69,4 +69,83 @@ public class GraphSeedingService(GremlinClient client)
                     .Promise(traversal => traversal.Iterate());
         }
     }
+
+    /// <summary>
+    ///     Completely wipes the database and seeds it with products, users, and purchase history.
+    /// </summary>
+    public async Task SeedAsync(int userCount)
+    {
+        // 1. DROP THE ENTIRE DATABASE 💣
+        await _g.V().Drop().Promise(t => t.Iterate());
+
+        var faker = new Faker();
+        var productMap = new Dictionary<string, List<ProductInfo>>();
+        var categories = new[] { "Development", "Cloud", "DevOps", "Data Science" };
+
+        // 2. CREATE PRODUCTS FIRST 🏛️
+        // We create a baseline of products so we have something for users to buy.
+        foreach (var category in categories)
+        {
+            productMap[category] = [];
+
+            for (var i = 0; i < 10; i++) // 10 products per category
+            {
+                var productName = $"{category} {faker.Commerce.ProductName()}";
+
+                // Create product vertex
+                var productVertex = await _g.AddV("product")
+                    .Property("name", productName)
+                    .Property("category", category)
+                    .Property("price", decimal.Parse(faker.Commerce.Price()))
+                    .Promise(t => t.Next());
+
+                if (productVertex is null) continue;
+
+                productMap[category].Add(new ProductInfo
+                {
+                    Id = productVertex.Id,
+                    Category = category
+                });
+            }
+        }
+
+        // 3. CREATE USERS AND EDGES 👤⛓️
+        for (var i = 0; i < userCount; i++)
+        {
+            var persona = faker.PickRandom(categories);
+            var userName = faker.Name.FullName();
+
+            // Create User Vertex
+            var userVertex = await _g.AddV("person")
+                .Property("name", userName)
+                .Property("persona", persona)
+                .Promise(t => t.Next());
+
+            // Assign 5 products per user using the 80/20 Weighted Logic
+            for (var j = 0; j < 5; j++)
+            {
+                var preferredCategory = persona;
+
+                // 20% chance to deviate from their persona (creates the "messy" data needed for discovery)
+                if (faker.Random.Bool(0.2f)) preferredCategory = faker.PickRandom(categories);
+
+                if (!productMap.TryGetValue(preferredCategory, out var availableProducts)) continue;
+
+                var chosenProduct = faker.PickRandom(availableProducts);
+
+                // Create the "purchased" edge
+                await _g.V(userVertex.Id)
+                    .AddE("purchased")
+                    .To(__.V(chosenProduct.Id))
+                    .Promise(t => t.Iterate());
+            }
+        }
+    }
+
+
+    private class ProductInfo
+    {
+        public object Id { get; set; } = default!;
+        public string Category { get; set; } = string.Empty;
+    }
 }

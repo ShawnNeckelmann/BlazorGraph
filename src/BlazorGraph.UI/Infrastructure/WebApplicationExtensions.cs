@@ -8,6 +8,6 @@ public static class WebApplicationExtensions
     {
         using var scope = app.Services.CreateScope();
         var seedService = scope.ServiceProvider.GetRequiredService<GraphSeedingService>();
-        await seedService.SeedAsync();
+        await seedService.SeedAsync(100);
     }
 }
